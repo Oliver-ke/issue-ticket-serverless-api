@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
-  aws-sam-typescript-layers-example
+  Issue ticketing application
 
 Transform:
   - AWS::Serverless-2016-10-31
@@ -11,83 +11,80 @@ Globals:
       - !Ref RuntimeDependenciesLayer
     Environment:
       Variables:
-        SAMPLE_TABLE: !Ref SampleTable
-        ITEM_QUEUE: !Ref WriteQueue
+        TICKET_TABLE: !Ref Tickets
+        TICKET_REPLY_TABLE: !Ref TicketReplies
     Runtime: nodejs18.x
     MemorySize: 128
     Timeout: 100
 
 Resources:
-  getAllItemsFunction:
+  createTicketFunction:
     Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: makefile
     Properties:
-      Handler: dist/handlers/get-all-items.getAllItemsHandler
-      Description: A simple example includes a HTTP get method to get all items from a DynamoDB table.
+      Handler: dist/handlers/create-ticket.createTicketHandler
+      Description: Create issue ticket
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref SampleTable
+            TableName: !Ref Tickets
+        - SNSPublishMessagePolicy:
+            TopicName: !Ref NotificationTopic
       Events:
         Api:
           Type: Api
           Properties:
-            Path: /
-            Method: GET
-
-  getByIdFunction:
-    Type: AWS::Serverless::Function
-    Metadata:
-      BuildMethod: makefile
-    Properties:
-      Handler: dist/handlers/get-by-id.getByIdHandler
-      Description: A simple example includes a HTTP get method to get one item by id from a DynamoDB table.
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref SampleTable
-      Events:
-        Api:
-          Type: Api
-          Properties:
-            Path: /{id}
-            Method: GET
-
-  putItemFunction:
-    Type: AWS::Serverless::Function
-    Metadata:
-      BuildMethod: makefile
-    Properties:
-      Handler: dist/handlers/put-item.putItemHandler
-      Description: A simple example includes a HTTP post method to add one item to an SQS queue (to be written to a DynamoDB table later).
-      Policies:
-        - SQSSendMessagePolicy:
-            QueueName: !GetAtt WriteQueue.QueueName
-      Events:
-        Api:
-          Type: Api
-          Properties:
-            Path: /
+            Path: /ticket
             Method: POST
 
-  writeItemFunction:
+  msgSlackFunction:
     Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: makefile
     Properties:
-      Handler: dist/handlers/write-item.writeItemHandler
-      Description: A simple example includes an SQS subscription to write queued object to DynamoDB
-      Timeout: 25
+      Handler: dist/handlers/msg-slack.messageSlackHandler
+      Description: trigger new message in slack using webhook
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref SampleTable
+            TableName: !Ref Tickets
       Events:
-        SQSQueueEvent:
-          Type: SQS
+        SNSEvent:
+          Type: SNS
           Properties:
-            Queue: !GetAtt WriteQueue.Arn
-            BatchSize: 1
+            Topic: !Ref NotificationTopic
 
-  SampleTable:
+  replyTicketFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: makefile
+    Properties:
+      Handler: dist/handlers/reply-ticket.replyTicketHandler
+      Description: Adds a reply to a given ticket
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /ticket/{id}/reply
+            Method: POST
+
+  resolveTicketFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: makefile
+    Properties:
+      Handler: dist/handlers/resolve-ticket.resolveTicketHandler
+      Description: Resolves a given ticket
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Tickets
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /ticket/{id}
+            Method: PUT
+
+  Tickets:
     Type: AWS::Serverless::SimpleTable
     Properties:
       PrimaryKey:
@@ -96,6 +93,21 @@ Resources:
       ProvisionedThroughput:
         ReadCapacityUnits: 2
         WriteCapacityUnits: 2
+
+  TicketReplies:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey:
+        Name: id
+        Type: String
+      ProvisionedThroughput:
+        ReadCapacityUnits: 2
+        WriteCapacityUnits: 2
+
+  NotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: NewTicketCreated
 
   RuntimeDependenciesLayer:
     Type: AWS::Serverless::LayerVersion

@@ -1,14 +1,14 @@
 .PHONY: build-RuntimeDependenciesLayer build-lambda-common
-.PHONY: build-getAllItemsFunction build-getByIdFunction build-putItemFunction
+.PHONY: build-createTicketFunction build-msgSlackFunction build-replyTicketFunction build-resolveTicketFunction
 
-build-getAllItemsFunction:
-	$(MAKE) HANDLER=src/handlers/get-all-items.ts build-lambda-common
-build-getByIdFunction:
-	$(MAKE) HANDLER=src/handlers/get-by-id.ts build-lambda-common
-build-putItemFunction:
-	$(MAKE) HANDLER=src/handlers/put-item.ts build-lambda-common
-build-writeItemFunction:
-	$(MAKE) HANDLER=src/handlers/write-item.ts build-lambda-common
+build-createTicketFunction:
+	$(MAKE) HANDLER=src/handlers/create-ticket.ts build-lambda-common
+build-msgSlackFunction:
+	$(MAKE) HANDLER=src/handlers/msg-slack.ts build-lambda-common
+build-replyTicketFunction:
+	$(MAKE) HANDLER=src/handlers/reply-ticket.ts build-lambda-common
+build-resolveTicketFunction:
+	$(MAKE) HANDLER=src/handlers/resolve-ticket.ts build-lambda-common
 
 build-lambda-common:
 	npm install
