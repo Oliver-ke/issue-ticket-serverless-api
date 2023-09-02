@@ -3,8 +3,7 @@ import { SNSEvent } from "aws-lambda";
 import { ITicket } from "../utils/types";
 import axios from "axios";
 
-const SLACK_WH =
-  "https://hooks.slack.com/services/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";
+const SLACK_WH = "";
 
 export const messageSlackHandler = async (event: SNSEvent) => {
   console.info("Received from SNS:", event);
