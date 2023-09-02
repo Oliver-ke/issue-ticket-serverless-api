@@ -1,5 +1,5 @@
 .PHONY: build-RuntimeDependenciesLayer build-lambda-common
-.PHONY: build-createTicketFunction build-msgSlackFunction build-replyTicketFunction build-resolveTicketFunction
+.PHONY: build-createTicketFunction build-msgSlackFunction build-replyTicketFunction build-resolveTicketFunction build-getTicketsFunction build-getTicketFunction
 
 build-createTicketFunction:
 	$(MAKE) HANDLER=src/handlers/create-ticket.ts build-lambda-common
@@ -9,6 +9,10 @@ build-replyTicketFunction:
 	$(MAKE) HANDLER=src/handlers/reply-ticket.ts build-lambda-common
 build-resolveTicketFunction:
 	$(MAKE) HANDLER=src/handlers/resolve-ticket.ts build-lambda-common
+build-getTicketsFunction:
+	$(MAKE) HANDLER=src/handlers/get-tickets.ts build-lambda-common
+build-getTicketFunction:
+	$(MAKE) HANDLER=src/handlers/get-ticket.ts build-lambda-common
 
 build-lambda-common:
 	npm install

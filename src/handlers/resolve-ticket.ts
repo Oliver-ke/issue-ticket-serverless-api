@@ -1,27 +1,60 @@
 import "source-map-support/register";
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
+import { GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { getDbClient } from "../utils/dynamodb";
 
+const tableName = process.env.TICKET_TABLE;
 export const resolveTicketHandler = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
+  console.info("received:", event);
+
   if (event.httpMethod !== "PUT") {
     throw new Error(`Expect method PUT`);
   }
 
-  console.info("received:", event);
+  const ticketId = event.pathParameters.id;
+  const getTicketCommand = new GetCommand({
+    Key: { id: ticketId },
+    TableName: tableName,
+  });
 
-  const body = JSON.parse(event.body);
-  const id = body.id;
-  const name = body.name;
+  const updateTicketCommand = new UpdateCommand({
+    Key: { id: ticketId },
+    TableName: tableName,
+    AttributeUpdates: {
+      resolved: { Value: true },
+    },
+  });
 
-  const response = {
-    statusCode: 201,
-    body: JSON.stringify({ MessageId: "" }),
-  };
+  try {
+    const dbClient = getDbClient();
+    const ticket = await dbClient.send(getTicketCommand);
 
-  console.info(
-    `response from: ${event.path} statusCode: ${response.statusCode} body: ${response.body}`
-  );
+    if (!ticket.Item)
+      throw new Error(`Ticket with the given id ${ticketId} not found`);
 
-  return response;
+    await dbClient.send(updateTicketCommand);
+
+    const response = {
+      statusCode: 201,
+      body: JSON.stringify({ ticket: { ...ticket.Item, resolved: true } }),
+    };
+    console.info(
+      `response from: ${event.path} statusCode: ${response.statusCode} body: ${response.body}`
+    );
+
+    return response;
+  } catch (err) {
+    const msg = err.message || "Failed to reply ticket";
+    const response = {
+      statusCode: 400,
+      body: JSON.stringify({ message: msg }),
+    };
+
+    console.info(
+      `response from: ${event.path} statusCode: ${response.statusCode} body: ${response.body}`
+    );
+    return response;
+  }
 };

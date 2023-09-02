@@ -5,3 +5,10 @@ export interface ITicket {
   createOn: string;
   resolved: boolean;
 }
+
+export interface ITicketReply {
+  id: string;
+  ticketId: string;
+  message: string;
+  createdOn: string;
+}

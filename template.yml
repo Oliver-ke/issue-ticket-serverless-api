@@ -13,6 +13,7 @@ Globals:
       Variables:
         TICKET_TABLE: !Ref Tickets
         TICKET_REPLY_TABLE: !Ref TicketReplies
+        NOTIFS_SNS: !Ref NotificationTopic
     Runtime: nodejs18.x
     MemorySize: 128
     Timeout: 100
@@ -29,13 +30,49 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref Tickets
         - SNSPublishMessagePolicy:
-            TopicName: !Ref NotificationTopic
+            TopicName: !GetAtt NotificationTopic.TopicName
       Events:
         Api:
           Type: Api
           Properties:
             Path: /ticket
             Method: POST
+
+  getTicketsFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: makefile
+    Properties:
+      Handler: dist/handlers/get-tickets.getTicketsHandler
+      Description: Get issue tickets
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Tickets
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /ticket
+            Method: GET
+
+  getTicketFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: makefile
+    Properties:
+      Handler: dist/handlers/get-ticket.getTicketHandler
+      Description: Get issue ticket detail
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Tickets
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TicketReplies
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /ticket/{id}
+            Method: GET
 
   msgSlackFunction:
     Type: AWS::Serverless::Function
@@ -60,6 +97,9 @@ Resources:
     Properties:
       Handler: dist/handlers/reply-ticket.replyTicketHandler
       Description: Adds a reply to a given ticket
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TicketReplies
       Events:
         Api:
           Type: Api
